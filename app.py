@@ -1,5 +1,8 @@
 import streamlit as st
 from agent import run_agent, SYSTEM_PROMPT
+from db import init_db
+
+init_db()
 
 st.set_page_config(page_title="PM AI Agent", page_icon="🗂️")
 st.title("🗂️ PM AI Agent")
