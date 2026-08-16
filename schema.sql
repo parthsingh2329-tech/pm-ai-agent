@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     project_id TEXT NOT NULL,
     title TEXT NOT NULL,
     description TEXT,
+    start_date TEXT,
     due_date TEXT,
     status TEXT DEFAULT 'not_started',
     estimated_effort_hours REAL,

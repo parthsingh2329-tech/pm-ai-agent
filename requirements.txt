@@ -3,3 +3,6 @@ groq
 python-dotenv
 chromadb
 apscheduler
+plotly
+pandas
+psycopg2-binary

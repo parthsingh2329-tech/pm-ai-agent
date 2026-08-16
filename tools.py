@@ -15,6 +15,7 @@ TOOL_SCHEMAS = [
                 "properties": {
                     "title": {"type": "string"},
                     "description": {"type": "string"},
+                    "start_date": {"type": "string", "description": "ISO date, e.g. 2026-08-18"},
                     "due_date": {"type": "string", "description": "ISO date, e.g. 2026-08-20"},
                     "estimated_effort_hours": {"type": "number"},
                     "depends_on": {
@@ -116,15 +117,15 @@ TOOL_SCHEMAS = [
 ]
 
 
-def create_task(title, description="", due_date=None, estimated_effort_hours=None, depends_on=None):
+def create_task(title, description="", due_date=None, start_date=None, estimated_effort_hours=None, depends_on=None):
     project_id = get_current_project()
     if project_id is None:
         return {"error": "No active project selected."}
     task_id = str(uuid.uuid4())[:8]
     conn = get_connection()
     conn.execute(
-        "INSERT INTO tasks (id, project_id, title, description, due_date, status, estimated_effort_hours) VALUES (?, ?, ?, ?, ?, 'not_started', ?)",
-        (task_id, project_id, title, description, due_date, estimated_effort_hours),
+        "INSERT INTO tasks (id, project_id, title, description, start_date, due_date, status, estimated_effort_hours) VALUES (?, ?, ?, ?, ?, ?, 'not_started', ?)",
+        (task_id, project_id, title, description, start_date, due_date, estimated_effort_hours),
     )
     for dep_id in (depends_on or []):
         conn.execute(
@@ -134,7 +135,6 @@ def create_task(title, description="", due_date=None, estimated_effort_hours=Non
     conn.commit()
     conn.close()
     return {"task_id": task_id, "created": True}
-
 
 def update_task(task_id, status=None, actual_effort_hours=None):
     conn = get_connection()
