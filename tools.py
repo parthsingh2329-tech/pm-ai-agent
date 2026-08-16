@@ -1,4 +1,5 @@
 from memory import add_note, search_memory
+from session_state import get_current_project
 import uuid
 from datetime import datetime, timedelta
 from db import get_connection
@@ -92,15 +93,38 @@ TOOL_SCHEMAS = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_project",
+            "description": "Create a new project.",
+            "parameters": {
+                "type": "object",
+                "properties": {"name": {"type": "string"}},
+                "required": ["name"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "list_projects",
+            "description": "List all existing projects.",
+            "parameters": {"type": "object", "properties": {}},
+        },
+    },
 ]
 
 
 def create_task(title, description="", due_date=None, estimated_effort_hours=None, depends_on=None):
+    project_id = get_current_project()
+    if project_id is None:
+        return {"error": "No active project selected."}
     task_id = str(uuid.uuid4())[:8]
     conn = get_connection()
     conn.execute(
-        "INSERT INTO tasks (id, title, description, due_date, status, estimated_effort_hours) VALUES (?, ?, ?, ?, 'not_started', ?)",
-        (task_id, title, description, due_date, estimated_effort_hours),
+        "INSERT INTO tasks (id, project_id, title, description, due_date, status, estimated_effort_hours) VALUES (?, ?, ?, ?, ?, 'not_started', ?)",
+        (task_id, project_id, title, description, due_date, estimated_effort_hours),
     )
     for dep_id in (depends_on or []):
         conn.execute(
@@ -159,10 +183,26 @@ def reschedule_downstream(task_id, new_due_date):
 
 
 def get_project_state():
+    project_id = get_current_project()
     conn = get_connection()
-    rows = conn.execute("SELECT * FROM tasks").fetchall()
+    rows = conn.execute("SELECT * FROM tasks WHERE project_id = ?", (project_id,)).fetchall()
     conn.close()
     return {"tasks": [dict(row) for row in rows]}
+
+def create_project(name):
+    project_id = str(uuid.uuid4())[:8]
+    conn = get_connection()
+    conn.execute("INSERT INTO projects (id, name) VALUES (?, ?)", (project_id, name))
+    conn.commit()
+    conn.close()
+    return {"project_id": project_id, "name": name, "created": True}
+
+
+def list_projects():
+    conn = get_connection()
+    rows = conn.execute("SELECT * FROM projects").fetchall()
+    conn.close()
+    return {"projects": [dict(row) for row in rows]}
 
 
 TOOL_IMPL = {
@@ -172,4 +212,6 @@ TOOL_IMPL = {
     "get_project_state": get_project_state,
     "search_memory": search_memory,
     "add_note": add_note,
+    "create_project": create_project,
+    "list_projects": list_projects,
 }
