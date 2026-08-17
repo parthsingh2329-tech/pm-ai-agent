@@ -8,9 +8,6 @@ DATABASE_URL = os.environ["DATABASE_URL"]
 
 
 class PGConnection:
-    """Wraps a psycopg2 connection so the rest of the app can keep using
-    sqlite-style '?' placeholders and conn.execute(...).fetchall()/.fetchone()."""
-
     def __init__(self, raw_conn):
         self._conn = raw_conn
 
@@ -28,6 +25,9 @@ class PGConnection:
     def commit(self):
         self._conn.commit()
 
+    def rollback(self):
+        self._conn.rollback()
+
     def close(self):
         self._conn.close()
 
@@ -42,6 +42,19 @@ def init_db():
     with open("schema.sql", "r") as f:
         conn.executescript(f.read())
     conn.commit()
+
+    try:
+        conn.execute("ALTER TABLE tasks ADD COLUMN priority TEXT DEFAULT 'medium'")
+        conn.commit()
+    except Exception:
+        conn.rollback()
+
+    try:
+        conn.execute("ALTER TABLE tasks ADD COLUMN archived BOOLEAN DEFAULT FALSE")
+        conn.commit()
+    except Exception:
+        conn.rollback()
+
     conn.close()
     print("Database initialized.")
 

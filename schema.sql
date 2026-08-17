@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS tasks (
 CREATE TABLE IF NOT EXISTS dependencies (
     task_id TEXT NOT NULL,
     depends_on_task_id TEXT NOT NULL,
+    relationship_type TEXT DEFAULT 'FS',
     FOREIGN KEY (task_id) REFERENCES tasks(id),
     FOREIGN KEY (depends_on_task_id) REFERENCES tasks(id)
 );

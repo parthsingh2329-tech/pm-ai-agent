@@ -6,6 +6,8 @@ from session_state import set_current_project
 from timeline import get_timeline_data, build_gantt_figure
 from extractor import extract_tasks_from_text
 from extractor import extract_tasks_from_text
+from timeline import get_timeline_data, build_gantt_figure
+from tools import create_project, list_projects, create_task, list_tasks_for_ui, archive_task, unarchive_task, delete_task
 
 init_db()
 st.set_page_config(page_title="PM AI Agent", page_icon="🗂️")
@@ -33,7 +35,7 @@ if selected_id:
 
 st.title("🗂️ PM AI Agent")
 
-tab_chat, tab_timeline, tab_import = st.tabs(["💬 Chat", "📅 Timeline", "📎 Import Notes"])
+tab_chat, tab_timeline, tab_import, tab_tasks = st.tabs(["💬 Chat", "📅 Timeline", "📎 Import Notes", "📋 Tasks"])
 
 with tab_chat:
     if "conversation_history" not in st.session_state:
@@ -62,10 +64,15 @@ with tab_chat:
 
 with tab_timeline:
     if selected_id:
-        df = get_timeline_data()
+        df, cpm_result = get_timeline_data()
         fig = build_gantt_figure(df)
         if fig:
             st.plotly_chart(fig, use_container_width=True)
+            if "error" in cpm_result:
+                st.warning(cpm_result["error"])
+            elif cpm_result.get("critical_path_titles"):
+                st.markdown(f"**Critical path:** {' → '.join(cpm_result['critical_path_titles'])}")
+                st.markdown(f"**Project duration:** {cpm_result['project_duration_days']} days")
         else:
             st.info("No tasks with dates yet — create one in the Chat tab.")
     else:
@@ -88,5 +95,39 @@ with tab_import:
                         estimated_effort_hours=t.get("estimated_effort_hours"),
                     )
                     st.write(f"✅ **{t.get('title')}** — due {t.get('due_date') or 'unspecified'}")
+    else:
+        st.info("Select or create a project first.")
+with tab_tasks:
+    if selected_id:
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            priority_filter = st.selectbox("Priority", ["All", "low", "medium", "high"])
+        with col2:
+            status_filter = st.selectbox("Status", ["All", "not_started", "in_progress", "blocked", "done"])
+        with col3:
+            show_archived = st.checkbox("Show archived")
+
+        tasks = list_tasks_for_ui(priority=priority_filter, status=status_filter, include_archived=show_archived)
+
+        if not tasks:
+            st.info("No tasks match these filters.")
+        else:
+            for t in tasks:
+                cols = st.columns([3, 1, 1, 1, 1, 1])
+                cols[0].write(f"**{t['title']}**")
+                cols[1].write(t.get("priority") or "medium")
+                cols[2].write(t["status"])
+                cols[3].write(t.get("due_date") or "—")
+                if t.get("archived"):
+                    if cols[4].button("Restore", key=f"restore_{t['id']}"):
+                        unarchive_task(t["id"])
+                        st.rerun()
+                else:
+                    if cols[4].button("Archive", key=f"archive_{t['id']}"):
+                        archive_task(t["id"])
+                        st.rerun()
+                if cols[5].button("Delete", key=f"delete_{t['id']}"):
+                    delete_task(t["id"])
+                    st.rerun()
     else:
         st.info("Select or create a project first.")

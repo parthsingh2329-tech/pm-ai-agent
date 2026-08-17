@@ -13,6 +13,8 @@ SYSTEM_PROMPT = (
     "and update tasks, reschedule dependent tasks, and check the current project "
     "state. Use tools whenever the user's request requires reading or changing "
     "project data — don't guess at task IDs or dates, look them up first."
+    " When calling any tool, omit optional parameters entirely if you don't have a value for them — "
+    "never pass null explicitly."
 )
 
 
